@@ -44,7 +44,7 @@ class MinecraftCdkStack(Stack):
             "echo 'eula=true' > eula.txt",
             "cat > server.properties <<'EOF'\n"
             "server-port=25565\n"
-            "online-mode=true\n"
+            "online-mode=false\n"
             "white-list=false\n"
             "enforce-whitelist=false\n"
             "motd=CDK Minecraft Server\n"

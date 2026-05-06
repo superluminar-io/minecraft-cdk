@@ -36,33 +36,53 @@ class MinecraftCdkStack(Stack):
 
         instance.user_data.add_commands(
             "dnf update -y",
-            "dnf install -y java-25-amazon-corretto-headless wget",
-            "mkdir -p /opt/minecraft",
+            "dnf install -y java-25-amazon-corretto-headless wget curl jq",
+            "mkdir -p /opt/minecraft/plugins",
             "cd /opt/minecraft",
-            # Check latest vanilla server URL manually from minecraft.net if needed
-            "wget -O server.jar https://piston-data.mojang.com/v1/objects/97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51/server.jar",
+
+            # Pick the Paper server version you want to run.
+            # Use the newest Paper version your server should be on.
+            "MC_VERSION=1.21.11",
+
+            # Download latest Paper build for that Minecraft version.
+            "PAPER_BUILD=$(curl -fsSL https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds | jq -r '.builds[-1].build')",
+            "wget -O paper.jar https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds/${PAPER_BUILD}/downloads/paper-${MC_VERSION}-${PAPER_BUILD}.jar",
+
+            # Install ViaVersion + ViaBackwards.
+            "wget -O plugins/ViaVersion.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion/versions/5.9.0/PAPER/ViaVersion-5.9.0.jar",
+            "wget -O plugins/ViaBackwards.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaBackwards/versions/5.9.0/PAPER/ViaBackwards-5.9.0.jar",
+
             "echo 'eula=true' > eula.txt",
             "cat > server.properties <<'EOF'\n"
             "server-port=25565\n"
             "online-mode=false\n"
             "white-list=false\n"
             "enforce-whitelist=false\n"
-            "motd=CDK Minecraft Server\n"
+            "motd=CDK Paper Minecraft Server\n"
             "view-distance=8\n"
             "simulation-distance=6\n"
+			"gamemode=creative\n"
+			"force-gamemode=true\n"
+			"difficulty=peaceful\n"
+			"spawn-protection=0\n"
+			"enable-command-block=true\n"
+			"pvp=false\n"
+			"allow-flight=true\n"
             "EOF",
+
             "cat > /etc/systemd/system/minecraft.service <<'EOF'\n"
             "[Unit]\n"
-            "Description=Minecraft Server\n"
+            "Description=Paper Minecraft Server\n"
             "After=network.target\n\n"
             "[Service]\n"
             "WorkingDirectory=/opt/minecraft\n"
-            "ExecStart=/usr/bin/java -Xms1G -Xmx3G -jar server.jar nogui\n"
+            "ExecStart=/usr/bin/java -Xms1G -Xmx3G -jar paper.jar nogui\n"
             "Restart=always\n"
             "User=root\n\n"
             "[Install]\n"
             "WantedBy=multi-user.target\n"
             "EOF",
+
             "systemctl daemon-reload",
             "systemctl enable minecraft",
             "systemctl start minecraft",

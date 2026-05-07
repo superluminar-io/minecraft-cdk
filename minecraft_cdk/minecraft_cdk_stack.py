@@ -68,6 +68,8 @@ class MinecraftCdkStack(Stack):
 			"enable-command-block=true\n"
 			"pvp=false\n"
 			"allow-flight=true\n"
+            "allow-world-teleport=true",
+            "op-permission-level=4",
             "EOF",
 
             "cat > /etc/systemd/system/minecraft.service <<'EOF'\n"

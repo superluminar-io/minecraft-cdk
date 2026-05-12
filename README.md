@@ -7,6 +7,45 @@ Instead of manually spinning up a server, configuring it by hand, and losing tha
 
 The server runs [Paper](https://papermc.io/), a high-performance fork of Minecraft's server software, with [ViaVersion](https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion) and [ViaBackwards](https://hangarcdn.papermc.io/plugins/ViaVersion/ViaBackwards) installed so players on different client versions can connect. A Network Load Balancer sits in front of the instance to provide a stable DNS hostname — the address players use to connect never changes, even if the underlying EC2 instance is replaced.
 
+## Architecture
+
+```
+  Minecraft Players
+        │
+        │  TCP :25565
+        ▼
+┌───────────────────────────────────────────────────────────┐
+│ AWS                                                        │
+│  ┌─────────────────────────────────────────────────────┐  │
+│  │ VPC  (single AZ · no NAT gateway)                   │  │
+│  │  ┌───────────────────────────────────────────────┐  │  │
+│  │  │ Public Subnet                                  │  │  │
+│  │  │                                                │  │  │
+│  │  │  ┌──────────────────────┐                     │  │  │
+│  │  │  │ Network Load         │                     │  │  │
+│  │  │  │ Balancer             │                     │  │  │
+│  │  │  │ (internet-facing)    │                     │  │  │
+│  │  │  │ TCP :25565           │                     │  │  │
+│  │  │  └──────────┬───────────┘                     │  │  │
+│  │  │             │ Target Group  TCP :25565         │  │  │
+│  │  │             ▼                                  │  │  │
+│  │  │  ┌──────────────────────┐                     │  │  │
+│  │  │  │ EC2  t3.medium       │                     │  │  │
+│  │  │  │ Amazon Linux 2023    │                     │  │  │
+│  │  │  │ 20 GB EBS            │                     │  │  │
+│  │  │  │ ─────────────────    │                     │  │  │
+│  │  │  │ Paper 1.21.11        │                     │  │  │
+│  │  │  │ ViaVersion 5.9.0     │                     │  │  │
+│  │  │  │ ViaBackwards 5.9.0   │                     │  │  │
+│  │  │  │ (systemd · Java 25)  │                     │  │  │
+│  │  │  └──────────────────────┘                     │  │  │
+│  │  └───────────────────────────────────────────────┘  │  │
+│  └─────────────────────────────────────────────────────┘  │
+│                                                            │
+│  Output: NLB DNS name  ◄── use this as your server address │
+└───────────────────────────────────────────────────────────┘
+```
+
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 This project is set up like a standard Python project.  The initialization

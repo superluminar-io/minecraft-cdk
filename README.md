@@ -1,7 +1,11 @@
 
-# Welcome to your CDK Python project!
+# Minecraft CDK
 
-This is a blank project for CDK development with Python.
+This project provisions a fully playable Minecraft server on AWS using the AWS CDK (Python). The goal is to treat game server infrastructure the same way you would treat any other cloud workload: defined as code, repeatable, and deployable with a single command.
+
+Instead of manually spinning up a server, configuring it by hand, and losing that configuration the moment the instance is replaced, everything here is declared in code. Running `cdk deploy` stands up the complete stack from scratch — VPC, EC2 instance, Network Load Balancer, and the Minecraft server software installed and running as a systemd service.
+
+The server runs [Paper](https://papermc.io/), a high-performance fork of Minecraft's server software, with [ViaVersion](https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion) and [ViaBackwards](https://hangarcdn.papermc.io/plugins/ViaVersion/ViaBackwards) installed so players on different client versions can connect. A Network Load Balancer sits in front of the instance to provide a stable DNS hostname — the address players use to connect never changes, even if the underlying EC2 instance is replaced.
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
 

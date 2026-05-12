@@ -8,10 +8,17 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+# A CDK Stack is the unit of deployment — everything defined inside one Stack
+# gets deployed together as a single CloudFormation stack.
 class MinecraftCdkStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs):
         super().__init__(scope, construct_id, **kwargs)
 
+        # A VPC (Virtual Private Cloud) is a private network inside AWS.
+        # All our resources live inside it. max_azs=1 keeps things simple and
+        # cheap by using only one Availability Zone. nat_gateways=0 avoids the
+        # ~$30/month NAT gateway charge — the EC2 instance uses a public IP
+        # instead for outbound internet access.
         vpc = ec2.Vpc(
             self,
             "Vpc",
@@ -19,6 +26,10 @@ class MinecraftCdkStack(Stack):
             nat_gateways=0,
         )
 
+        # The EC2 instance is the virtual machine that will run the Minecraft server.
+        # t3.medium gives us 2 vCPUs and 4 GB RAM — enough headroom for a small server.
+        # We place it in the public subnet so it can reach the internet without a NAT gateway.
+        # The 20 GB EBS volume is the root disk where the OS and server files live.
         instance = ec2.Instance(
             self,
             "MinecraftServer",
@@ -34,6 +45,9 @@ class MinecraftCdkStack(Stack):
             ],
         )
 
+        # User data is a shell script that runs automatically the first time the
+        # instance boots. This is how we install and configure the Minecraft server
+        # without ever SSHing into the machine manually.
         instance.user_data.add_commands(
             "dnf update -y",
             "dnf install -y java-25-amazon-corretto-headless wget curl jq",
@@ -49,10 +63,16 @@ class MinecraftCdkStack(Stack):
             "wget -O paper.jar https://api.papermc.io/v2/projects/paper/versions/${MC_VERSION}/builds/${PAPER_BUILD}/downloads/paper-${MC_VERSION}-${PAPER_BUILD}.jar",
 
             # Install ViaVersion + ViaBackwards.
+            # These plugins let players on different Minecraft client versions connect
+            # to the same server, so everyone doesn't need to be on the exact same version.
             "wget -O plugins/ViaVersion.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion/versions/5.9.0/PAPER/ViaVersion-5.9.0.jar",
             "wget -O plugins/ViaBackwards.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaBackwards/versions/5.9.0/PAPER/ViaBackwards-5.9.0.jar",
 
+            # Mojang requires accepting the EULA before the server will start.
             "echo 'eula=true' > eula.txt",
+
+            # Write the server configuration file.
+            # online-mode=false means players don't need a paid Minecraft account to join.
             "cat > server.properties <<'EOF'\n"
             "server-port=25565\n"
             "online-mode=false\n"
@@ -61,17 +81,19 @@ class MinecraftCdkStack(Stack):
             "motd=CDK Paper Minecraft Server\n"
             "view-distance=8\n"
             "simulation-distance=6\n"
-			"gamemode=creative\n"
-			"force-gamemode=true\n"
-			"difficulty=peaceful\n"
-			"spawn-protection=0\n"
-			"enable-command-block=true\n"
-			"pvp=false\n"
-			"allow-flight=true\n"
+            "gamemode=creative\n"
+            "force-gamemode=true\n"
+            "difficulty=peaceful\n"
+            "spawn-protection=0\n"
+            "enable-command-block=true\n"
+            "pvp=false\n"
+            "allow-flight=true\n"
             "allow-world-teleport=true",
             "op-permission-level=4",
             "EOF",
 
+            # Register the Minecraft server as a systemd service so it starts
+            # automatically on boot and restarts itself if it crashes.
             "cat > /etc/systemd/system/minecraft.service <<'EOF'\n"
             "[Unit]\n"
             "Description=Paper Minecraft Server\n"
@@ -90,7 +112,9 @@ class MinecraftCdkStack(Stack):
             "systemctl start minecraft",
         )
 
-        # Create Network Load Balancer for stable external endpoint
+        # A Network Load Balancer (NLB) sits in front of the EC2 instance and gives
+        # us a stable DNS hostname. Without it, the server address would change every
+        # time the instance is stopped and restarted, because EC2 reassigns public IPs.
         nlb = elbv2.NetworkLoadBalancer(
             self,
             "MinecraftNLB",
@@ -98,7 +122,9 @@ class MinecraftCdkStack(Stack):
             internet_facing=True,
         )
 
-        # Create target group for Minecraft server (TCP port 25565)
+        # A target group is the NLB's list of backends to send traffic to.
+        # The health check periodically opens a TCP connection to port 25565 — if
+        # it fails, the NLB stops sending players to that instance.
         target_group = elbv2.NetworkTargetGroup(
             self,
             "MinecraftTargetGroup",
@@ -113,10 +139,11 @@ class MinecraftCdkStack(Stack):
             ),
         )
 
-        # Add EC2 instance as target
+        # Register our EC2 instance as the target on port 25565.
         target_group.add_target(targets.InstanceTarget(instance, 25565))
 
-        # Add listener to NLB
+        # A listener is the port the NLB accepts incoming connections on.
+        # It receives TCP traffic on 25565 and forwards it to the target group.
         nlb.add_listener(
             "MinecraftListener",
             port=25565,
@@ -124,6 +151,11 @@ class MinecraftCdkStack(Stack):
             default_target_groups=[target_group],
         )
 
-        nlb.connections.allow_from_any_ipv4( ec2.Port.tcp(25565))
+        # Open port 25565 to the internet on the NLB, and allow the NLB to
+        # forward that traffic on to the EC2 instance.
+        nlb.connections.allow_from_any_ipv4(ec2.Port.tcp(25565))
         nlb.connections.allow_to(instance, ec2.Port.tcp(25565))
+
+        # Print the NLB's DNS name after deployment — this is the address
+        # players type into Minecraft to join the server.
         CfnOutput(self, "ServerAddress", value=nlb.load_balancer_dns_name)

@@ -50,7 +50,7 @@ class MinecraftCdkStack(Stack):
         # without ever SSHing into the machine manually.
         instance.user_data.add_commands(
             "dnf update -y",
-            "dnf install -y java-25-amazon-corretto-headless wget curl jq",
+            "dnf install -y java-26-amazon-corretto-headless wget jq",
             "mkdir -p /opt/minecraft/plugins",
             "cd /opt/minecraft",
 
@@ -65,9 +65,20 @@ class MinecraftCdkStack(Stack):
             # Install ViaVersion + ViaBackwards.
             # These plugins let players on different Minecraft client versions connect
             # to the same server, so everyone doesn't need to be on the exact same version.
-            "wget -O plugins/ViaVersion.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaVersion/versions/5.9.0/PAPER/ViaVersion-5.9.0.jar",
-            "wget -O plugins/ViaBackwards.jar https://hangarcdn.papermc.io/plugins/ViaVersion/ViaBackwards/versions/5.9.0/PAPER/ViaBackwards-5.9.0.jar",
-
+            "wget -O plugins/SkinsRestorer.jar https://cdn.modrinth.com/data/TsLS8Py5/versions/itZJnFwV/SkinsRestorer.jar?mr_download_reason=standalone",
+            "wget -O plugins/CalcMod.jar https://cdn.modrinth.com/data/XoHTb2Ap/versions/oOXqn6vP/calcmod-1.5.1%2Bpaper.26.1.2.jar?mr_download_reason=standalone",
+            "wget -O plugins/Geyser.jar https://cdn.modrinth.com/data/wKkoqHrH/versions/lyGmlRjy/Geyser-Spigot.jar?mr_download_reason=standalone",
+            "wget -O plugins/playerheads.jar https://cdn.modrinth.com/data/Kod9DPcA/versions/okVJGpLB/playerHead-1.1.jar?mr_download_reason=standalone",
+            "wget -O plugins/GrimAnticheat.jar https://cdn.modrinth.com/data/LJNGWSvH/versions/VUyQbubu/grimac-bukkit-2.3.74-0aa2e2b.jar?mr_download_reason=standalone",
+            "wget -O plugins/ImageFrame.jar https://cdn.modrinth.com/data/lJFOpcEj/versions/XgQJ3r9K/ImageFrame-2026.1.3.0.jar?mr_download_reason=standalone",
+            "wget -O plugins/WorldEdit.jar https://cdn.modrinth.com/data/1u6JkXh5/versions/ESAHQFYo/worldedit-bukkit-7.4.4-beta-01.jar?mr_download_reason=standalone",
+            "wget -O plugins/Chunky.jar https://cdn.modrinth.com/data/fALzjamp/versions/MdY6JATr/Chunky-Bukkit-1.5.3.jar?mr_download_reason=standalone",
+            "wget -O plugins/ViaVersion.jar https://cdn.modrinth.com/data/P1OZGk5p/versions/z0sCGSmk/ViaVersion-5.10.1-SNAPSHOT.jar?mr_download_reason=standalone",
+            "wget -O plugins/ViaBackwards.jar https://cdn.modrinth.com/data/NpvuJQoq/versions/2dyKr4e5/ViaBackwards-5.10.1-SNAPSHOT.jar?mr_download_reason=standalone",
+            "wget -O plugins/LuckyPerms.jar https://cdn.modrinth.com/data/Vebnzrzj/versions/MBSY8toc/LuckPerms-Bukkit-5.5.53.jar?mr_download_reason=standalone"
+            "wget -O plugins/OrbitalStrike.jar https://cdn.modrinth.com/data/Y1ZEvtor/versions/pDM578r0/OrbitalStrikeCannon-7.0.jar?mr_download_reason=standalone"
+            "wget -O plugins/Axiom.jar https://cdn.modrinth.com/data/evkiwA7V/versions/mSS9faHn/AxiomPaperPlugin-5.0.4-for-MC1.21.11.jar?mr_download_reason=standalone"
+            "wget -O plugins/Axiom.jar https://cdn.modrinth.com/data/evkiwA7V/versions/mSS9faHn/AxiomPaperPlugin-5.0.4-for-MC1.21.11.jar?mr_download_reason=standalone"
             # Mojang requires accepting the EULA before the server will start.
             "echo 'eula=true' > eula.txt",
 
@@ -106,6 +117,28 @@ class MinecraftCdkStack(Stack):
             "[Install]\n"
             "WantedBy=multi-user.target\n"
             "EOF",
+
+            "cat > ops.json << 'EOF'\n"
+            '[\n'
+            '  {\n'
+            '    "uuid": "6a98a434-7978-3405-92de-d0645a0c22bc",\n'
+            '    "name": "skompele",\n'
+            '    "level": 4,\n'
+            '    "bypassesPlayerLimit": false\n'
+            '  },\n'
+            '  {\n'
+            '    "uuid": "714eef67-f0ff-3bc6-95a8-1c14a31eb133",\n'
+            '    "name": "Sir_bot_a_lot",\n'
+            '    "level": 4,\n'
+            '    "bypassesPlayerLimit": false\n'
+            '  },\n'
+            '  {\n'
+            '    "uuid": "0861f2b2-44ae-3f76-9979-09ad035ea7c2",\n'
+            '    "name": "_I_d0nt_kn0w",\n'
+            '    "level": 4,\n'
+            '    "bypassesPlayerLimit": false\n'
+            '  }\n'
+            ']\n'
 
             "systemctl daemon-reload",
             "systemctl enable minecraft",
